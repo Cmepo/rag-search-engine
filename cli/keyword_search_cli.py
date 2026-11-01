@@ -1,6 +1,6 @@
 import argparse, json
 from pathlib import Path
-from cli.lib.keyword_search import *
+from lib.keyword_search import *
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT_DIR / "data"
@@ -15,6 +15,8 @@ def main() -> None:
     search_parser = subparsers.add_parser("search", help="Search movies using keywords")
     search_parser.add_argument("query", type=str, help="Search query")
 
+    subparsers.add_parser("build", help="Build the inverted index")
+    
     args = parser.parse_args()
 
     stopwords = load_stop_words(stopword_path)
@@ -31,6 +33,9 @@ def main() -> None:
                     i+=1
                     if i < 6:
                         print(f"{i}. {entry["title"]}")
+
+        case "build":
+            build_command()
         case _:
             parser.print_help()
 

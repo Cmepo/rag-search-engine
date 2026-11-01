@@ -2,6 +2,10 @@ import string, json, pickle
 from nltk.stem import PorterStemmer
 from pathlib import Path
 
+ROOT_DIR = Path(__file__).resolve().parents[2]
+CACHE_DIR = ROOT_DIR/"cache"
+DATA_DIR = ROOT_DIR/"data"/"movies.json"
+
 def load_movie_data(path:Path):
     with path.open("r",encoding="utf-8") as f:
         movie_data = json.load(f)
@@ -37,7 +41,11 @@ def load_stop_words(stopword_path:Path) -> list[str]:
 
 
 def build_command():
-    pass
+    inverted_index = InvertedIndex()
+    inverted_index.build(DATA_DIR)
+    inverted_index.save()
+    docs = inverted_index.get_documents("merida")
+    print(f"First document for token 'merida' = {docs[0]}")
 
 ####
 
@@ -49,17 +57,25 @@ class InvertedIndex:
     def __add_document(self, doc_id, text):
         tokenized_text = normalize_and_tokenize(text)
         for token in tokenized_text:
-            self.index[token] = doc_id
+            if token not in self.index:
+                self.index[token] = set()
+            self.index[token].add(doc_id)
 
     def get_documents(self, term):
-        return sorted(self.index[term], reverse=True)
+        return sorted(self.index[term], reverse=False)
 
-    def build(self,path):
+    def build(self, path):
         movie_data = load_movie_data(path)
-        for movie in movie_data:
-            self.docmap["doc_id"] = movie["id"]
-            self.__add_document(movie["id"], 
-                                f"{movie['title']} {movie['description']}")
-            
+        for m in movie_data["movies"]:
+            self.docmap["doc_id"] = m.get("id")
+            self.__add_document(m["id"], 
+                                f"{m['title']} {m['description']}")
+
     def save(self):
-        pass
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+        with (CACHE_DIR/"index.pkl").open("wb") as f:
+            pickle.dump(self.index, f)
+
+        with (CACHE_DIR/"docmap.pkl").open("wb") as f:
+            pickle.dump(self.docmap, f)
