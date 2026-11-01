@@ -16,23 +16,39 @@ def main() -> None:
     search_parser.add_argument("query", type=str, help="Search query")
 
     subparsers.add_parser("build", help="Build the inverted index")
-    
+
     args = parser.parse_args()
 
     stopwords = load_stop_words(stopword_path)
 
     match args.command:
         case "search":
-            results = []
-            i=0
-            print(f"Searching for: {args.query}")
-            movie_data = load_movie_data(json_path)
-            for entry in movie_data["movies"]:
-                if is_in_query(args.query, entry["title"],stopwords):
-                    results.append(entry)
-                    i+=1
-                    if i < 6:
-                        print(f"{i}. {entry["title"]}")
+            inverted_index = InvertedIndex()
+            try:
+                inverted_index.load()
+            except FileNotFoundError:
+                parser.exit(
+                    status=1,
+                    message="Error: Index not found. Run 'build' first.\n"
+                )
+
+            query_tokens = normalize_and_tokenize(args.query)   
+            results = set()
+
+            print(f"Searching for: {args.query}")   
+
+            for token in query_tokens:
+                doc_ids = inverted_index.get_documents(token)
+
+                for doc_id in doc_ids:
+                    if doc_id not in results:
+                        results.add(doc_id)
+                        movie = inverted_index.docmap[doc_id]
+                        print(f"{len(results)}. {movie["title"]} (ID: {doc_id})")
+                        if len(results) >= 5:
+                            break
+                if len(results) >= 5:
+                    break
 
         case "build":
             build_command()
