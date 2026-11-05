@@ -1,10 +1,10 @@
-# Mistral Vibe is working on this file - adding comment per user request
 import argparse, math
 from pathlib import Path
 from lib.keyword_search import *
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT_DIR / "data"
+
 
 json_path = DATA_DIR/"movies.json"
 stopword_path = DATA_DIR/"stopwords.txt"
@@ -28,6 +28,20 @@ def main() -> None:
     tf_idf_parser = subparsers.add_parser("tfidf", help="TF-IDF")
     tf_idf_parser.add_argument("doc_id", type=int, help="Document ID")
     tf_idf_parser.add_argument("term", type=str, help="Term to check")
+
+    bm25_idf_parser = subparsers.add_parser(
+        "bm25idf", help="Get BM25 IDF score for a given term")
+    bm25_idf_parser.add_argument("term", type=str, help="Term to get BM25 IDF score for")
+
+
+    bm25_tf_parser = subparsers.add_parser(
+        "bm25tf", help="Get BM25 TF score for a given document ID and term"
+    )
+    bm25_tf_parser.add_argument("doc_id", type=int, help="Document ID")
+    bm25_tf_parser.add_argument("term", type=str, help="Term to get BM25 TF score for")
+    bm25_tf_parser.add_argument(
+        "k1", type=float, nargs="?", default=BM25_K1, help="Tunable BM25 K1 parameter"
+    )
 
     args = parser.parse_args()
 
@@ -110,6 +124,27 @@ def main() -> None:
                            (len(inverted_index.index[term])+1))
             tf_idf = tf * idf
             print(f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {tf_idf:.2f}")
+        
+        case "bm25idf":
+            try:
+                bm25idf = bm25_idf_command(args.term)
+                print(f"BM25 IDF score of '{args.term}': {bm25idf:.2f}")
+            except FileNotFoundError:
+                parser.exit(
+                    status=1,
+                    message="Error: Index not found. Run 'build' first.\n"
+                )
+
+        case "bm25tf":
+            try:
+                bm25tf = bm25_tf_command(args.doc_id, args.term, k1=args.k1)
+                print(f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}")
+            except FileNotFoundError:
+                parser.exit(
+                    status=1,
+                    message="Error: Index not found. Run 'build' first.\n"
+                )
+
         case _:
             parser.print_help()
 

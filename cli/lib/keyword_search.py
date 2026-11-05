@@ -1,4 +1,4 @@
-import string, json, pickle
+import string, json, pickle, math
 from nltk.stem import PorterStemmer
 from pathlib import Path
 from collections import Counter
@@ -6,6 +6,8 @@ from collections import Counter
 ROOT_DIR = Path(__file__).resolve().parents[2]
 CACHE_DIR = ROOT_DIR/"cache"
 MOVIES_PATH = ROOT_DIR/"data"/"movies.json"
+BM25_K1 = 1.5
+
 
 stemmer = PorterStemmer()
 
@@ -47,18 +49,30 @@ def load_stop_words(stopword_path:Path) -> list[str]:
     norm_stopwords_list = normalize_and_tokenize(stopwords)
     return norm_stopwords_list
 
-
-def build_command() -> None:
-    inverted_index = InvertedIndex()
-    inverted_index.build(MOVIES_PATH)
-    inverted_index.save()
-
 def tokenize_single_term(term:str) -> str:
     tokens = normalize_and_tokenize(term)
     if len(tokens) != 1:
         raise Exception ('Exception (tokenize_single_term): Not a single token')
     return tokens[0]
 
+def build_command() -> None:
+    inverted_index = InvertedIndex()
+    inverted_index.build(MOVIES_PATH)
+    inverted_index.save()
+
+def bm25_idf_command(term:str) -> float:
+    inverted_index = InvertedIndex()
+    inverted_index.load()
+    tokenized_term = tokenize_single_term(term)
+    bm25_idf = inverted_index.get_bm25_idf(tokenized_term)
+    return bm25_idf
+
+def bm25_tf_command(doc_id, term, k1=None) -> float:
+    inverted_index = InvertedIndex()
+    inverted_index.load()
+    tokenized_term = tokenize_single_term(term)
+    bm25_tf = inverted_index.get_bm25_tf(doc_id, tokenized_term)
+    return bm25_tf
 ####
 
 class InvertedIndex:
@@ -86,7 +100,18 @@ class InvertedIndex:
         doc_text = f"{movie['title']} {movie['description']}"
         tokens = normalize_and_tokenize(doc_text)
         return tokens.count(term)
-    
+
+    def get_bm25_idf(self, term:str) -> float:
+        N = len(self.docmap)
+        df = len(self.index.get(term,set()))
+        bm25_idf = math.log((N - df + 0.5) / (df + 0.5) + 1)
+        return bm25_idf
+
+    def get_bm25_tf(self, doc_id, term, k1=BM25_K1):
+        tf = self.get_tf(doc_id, term)
+        sat_score = (tf * (k1 + 1)) / (tf + k1)
+        return sat_score
+
     def build(self, path:Path) -> None:
         movie_data = load_movie_data(path)
         for m in movie_data["movies"]:
