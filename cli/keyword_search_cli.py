@@ -42,6 +42,15 @@ def main() -> None:
     bm25_tf_parser.add_argument(
         "k1", type=float, nargs="?", default=BM25_K1, help="Tunable BM25 K1 parameter"
     )
+    bm25_tf_parser.add_argument(
+        "b", type=float, nargs="?", default=BM25_B, help="Tunable BM25 b parameter"
+    )
+
+    bm25search_parser = subparsers.add_parser(
+        "bm25search", help="Search movies using full BM25 scoring"
+    )
+    bm25search_parser.add_argument("query", type=str, help="Search query")
+    bm25search_parser.add_argument("limit", type=int, nargs="?", default=5, help="Display limit of the results")
 
     args = parser.parse_args()
 
@@ -137,8 +146,19 @@ def main() -> None:
 
         case "bm25tf":
             try:
-                bm25tf = bm25_tf_command(args.doc_id, args.term, k1=args.k1)
+                bm25tf = bm25_tf_command(args.doc_id, args.term, k1=args.k1, b=args.b)
                 print(f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}")
+            except FileNotFoundError:
+                parser.exit(
+                    status=1,
+                    message="Error: Index not found. Run 'build' first.\n"
+                )
+
+        case "bm25search":
+            try:
+                bm25 = bm25_command(args.query, limit=args.limit)
+                for rank, doc_id, title, score in bm25:
+                    print(f"{rank}. ({doc_id}) {title} - Score: {score:.2f}")
             except FileNotFoundError:
                 parser.exit(
                     status=1,
