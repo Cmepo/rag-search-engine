@@ -96,6 +96,7 @@ class InvertedIndex:
         self.stopwords = set(stopwords) if stopwords else set()
         self.doc_lengths = {}
         self.doc_lengths_path = CACHE_DIR/"doc_lengths.pkl"
+        self.index_path = CACHE_DIR / "index.pkl"
 
     def __add_document(self, doc_id:int, text:str) -> None:
         tokenized_text = normalize_and_tokenize(text)

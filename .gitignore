@@ -12,3 +12,5 @@ wheels/
 # Folders
 /data/
 /cache/
+
+.env

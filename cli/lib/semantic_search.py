@@ -92,9 +92,9 @@ def semantic_chunk(text:str, max_size=4, overlap=0):
         chunk = ' '.join(split_docs[i:i+max_size])
         chunks.append(chunk)
 
-    for i, chunk in enumerate(chunks, 1):
-        print(f"{i}. {chunk}")
-        
+    #for i, chunk in enumerate(chunks, 1):
+    #    print(f"{i}. {chunk}")
+
     return chunks
 
 def embed_chunks():
